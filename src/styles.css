@@ -48,20 +48,20 @@
   --radius: 0.875rem;
 
   /* Warm cream café palette */
-  --background: oklch(0.972 0.014 82);          /* page cream #f7f1e6 */
-  --foreground: oklch(0.28 0.03 55);            /* deep coffee text */
-  --card: oklch(0.995 0.006 90);                /* card near-white */
+  --background: oklch(0.972 0.014 82); /* page cream #f7f1e6 */
+  --foreground: oklch(0.28 0.03 55); /* deep coffee text */
+  --card: oklch(0.995 0.006 90); /* card near-white */
   --card-foreground: oklch(0.28 0.03 55);
   --popover: oklch(0.995 0.006 90);
   --popover-foreground: oklch(0.28 0.03 55);
 
-  --primary: oklch(0.42 0.07 45);               /* rich brown button */
+  --primary: oklch(0.42 0.07 45); /* rich brown button */
   --primary-foreground: oklch(0.98 0.01 85);
   --secondary: oklch(0.93 0.02 80);
   --secondary-foreground: oklch(0.32 0.04 50);
   --muted: oklch(0.945 0.015 82);
   --muted-foreground: oklch(0.52 0.025 60);
-  --accent: oklch(0.92 0.03 75);                /* warm sand accent */
+  --accent: oklch(0.92 0.03 75); /* warm sand accent */
   --accent-foreground: oklch(0.32 0.05 45);
 
   --destructive: oklch(0.6 0.18 25);
@@ -89,17 +89,33 @@
 }
 
 .dark {
-  --background: oklch(0.2 0.02 60);
-  --foreground: oklch(0.95 0.01 85);
-  --card: oklch(0.24 0.02 55);
-  --card-foreground: oklch(0.95 0.01 85);
+  --background: oklch(0.18 0.015 60);
+  --foreground: oklch(0.92 0.015 75);
+  --card: oklch(0.22 0.02 55);
+  --card-foreground: oklch(0.92 0.015 75);
+  --popover: oklch(0.22 0.02 55);
+  --popover-foreground: oklch(0.92 0.015 75);
   --primary: oklch(0.7 0.08 55);
-  --primary-foreground: oklch(0.2 0.02 60);
-  --border: oklch(1 0 0 / 10%);
+  --primary-foreground: oklch(0.18 0.015 60);
+  --secondary: oklch(0.26 0.015 60);
+  --secondary-foreground: oklch(0.92 0.015 75);
+  --muted: oklch(0.24 0.015 60);
+  --muted-foreground: oklch(0.65 0.015 65);
+  --accent: oklch(0.28 0.02 55);
+  --accent-foreground: oklch(0.92 0.015 75);
+  --destructive: oklch(0.5 0.15 25);
+  --destructive-foreground: oklch(0.98 0.01 85);
+  --border: oklch(0.28 0.015 60);
+  --input: oklch(0.28 0.015 60);
+  --ring: oklch(0.7 0.08 55);
+  --sidebar-active: oklch(0.26 0.02 55);
+  --sidebar-active-foreground: oklch(0.92 0.015 75);
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
+  * {
+    border-color: var(--color-border);
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);

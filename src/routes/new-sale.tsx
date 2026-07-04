@@ -4,6 +4,8 @@ import { useStore } from "@/lib/store";
 import { Search, Trash2, Minus, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { getAutomaticCategory } from "@/lib/categories";
+import { PLACEHOLDER_IMAGE } from "@/lib/data";
 
 export const Route = createFileRoute("/new-sale")({
   head: () => ({
@@ -18,14 +20,30 @@ export const Route = createFileRoute("/new-sale")({
 });
 
 function NewSale() {
-  const { products, cart, addToCart, removeFromCart, changeQty, clearCart, notify } = useStore();
+  const {
+    products,
+    cart,
+    addToCart,
+    removeFromCart,
+    changeQty,
+    clearCart,
+    notify,
+    addTransaction,
+  } = useStore();
   const [query, setQuery] = useState("");
-  const [payment, setPayment] = useState("Card");
+  const [category, setCategory] = useState("All");
+  const payment = "Cash";
   const navigate = useNavigate();
 
   const filtered = useMemo(
-    () => products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())),
-    [products, query],
+    () =>
+      products.filter((p) => {
+        const matchesQuery = p.name.toLowerCase().includes(query.toLowerCase());
+        if (category === "All") return matchesQuery;
+        const cat = p.category || getAutomaticCategory(p.name);
+        return matchesQuery && cat === category;
+      }),
+    [products, query, category],
   );
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
@@ -37,28 +55,45 @@ function NewSale() {
       toast.error("Cart is empty — add products first.");
       return;
     }
-    toast.success(`Sale completed · $${total.toFixed(2)} via ${payment}`);
-    notify(`New sale · $${total.toFixed(2)} (${payment})`);
+    addTransaction([...cart], subtotal, tax, total, payment);
+    toast.success(`Sale completed · ₱${total.toFixed(2)} via ${payment}`);
+    notify(`New sale · ₱${total.toFixed(2)} (${payment})`);
     clearCart();
     navigate({ to: "/" });
   };
 
   return (
     <AppLayout>
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">New Sale</h1>
-          <div className="relative mt-5">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <h1 className="text-xl font-semibold tracking-tight">New Sale</h1>
+          <div className="relative mt-3">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search products..."
-              className="h-11 w-full rounded-lg border border-border bg-card pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+              className="h-9 w-full rounded-lg border border-border bg-card pl-9 pr-4 text-xs outline-none focus:ring-2 focus:ring-ring/40"
             />
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div className="flex gap-1.5 overflow-x-auto py-1 mt-3">
+            {["All", "Coffee", "Pastries", "Syrups & Retail", "Drinks & Others"].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategory(cat)}
+                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap border ${
+                  category === cat
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-muted-foreground border-border hover:bg-muted"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {filtered.map((p) => (
               <button
                 key={p.id}
@@ -66,52 +101,57 @@ function NewSale() {
                   addToCart(p);
                   toast.success(`${p.name} added`);
                 }}
-                className="rounded-xl border border-border bg-card p-3 text-left transition hover:shadow-md active:scale-[.98]"
+                className="rounded-lg border border-border bg-card p-2 text-left transition hover:shadow-md active:scale-[.98]"
               >
-                <div className="aspect-square overflow-hidden rounded-lg bg-muted">
+                <div className="aspect-square overflow-hidden rounded-md bg-muted">
                   <img
-                    src={p.image}
+                    src={p.image || PLACEHOLDER_IMAGE}
                     alt={p.name}
                     loading="lazy"
                     width={512}
                     height={512}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+                    }}
                     className="h-full w-full object-cover"
                   />
                 </div>
-                <p className="mt-3 text-sm font-medium">{p.name}</p>
-                <p className="text-sm text-muted-foreground">${p.price.toFixed(2)}</p>
+                <p className="mt-2 truncate text-xs font-medium">{p.name}</p>
+                <p className="text-xs text-muted-foreground">₱{p.price.toFixed(2)}</p>
               </button>
             ))}
             {filtered.length === 0 && (
-              <p className="col-span-full py-10 text-center text-sm text-muted-foreground">
+              <p className="col-span-full py-10 text-center text-xs text-muted-foreground">
                 No products match "{query}".
               </p>
             )}
           </div>
         </div>
 
-        <aside className="h-fit rounded-xl border border-border bg-card p-5">
-          <h2 className="text-lg font-semibold">Order Summary</h2>
+        <aside className="h-fit rounded-xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold">Order Summary</h2>
           {cart.length === 0 ? (
-            <p className="mt-4 text-sm text-muted-foreground">No items yet. Tap a product to add it.</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              No items yet. Tap a product to add it.
+            </p>
           ) : (
-            <ul className="mt-4 space-y-3">
+            <ul className="mt-3 space-y-2">
               {cart.map((i) => (
-                <li key={i.id} className="flex items-start justify-between gap-2 text-sm">
+                <li key={i.id} className="flex items-start justify-between gap-2 text-xs">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{i.name}</p>
-                    <div className="mt-1 inline-flex items-center gap-1 rounded-md border border-border">
+                    <div className="mt-1 inline-flex items-center rounded border border-border">
                       <button
                         onClick={() => changeQty(i.id, -1)}
-                        className="grid h-6 w-6 place-items-center hover:bg-muted"
+                        className="grid h-5 w-5 place-items-center hover:bg-muted"
                         aria-label="Decrease"
                       >
                         <Minus className="h-3 w-3" />
                       </button>
-                      <span className="min-w-6 text-center text-xs">{i.qty}</span>
+                      <span className="min-w-5 text-center text-[10px]">{i.qty}</span>
                       <button
                         onClick={() => changeQty(i.id, 1)}
-                        className="grid h-6 w-6 place-items-center hover:bg-muted"
+                        className="grid h-5 w-5 place-items-center hover:bg-muted"
                         aria-label="Increase"
                       >
                         <Plus className="h-3 w-3" />
@@ -119,13 +159,13 @@ function NewSale() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">${(i.price * i.qty).toFixed(2)}</span>
+                    <span className="font-medium text-xs">₱{(i.price * i.qty).toFixed(2)}</span>
                     <button
                       onClick={() => removeFromCart(i.id)}
-                      className="text-muted-foreground hover:text-destructive"
+                      className="text-muted-foreground hover:text-destructive shrink-0"
                       aria-label="Remove"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </li>
@@ -133,44 +173,31 @@ function NewSale() {
             </ul>
           )}
 
-          <div className="mt-5 space-y-1.5 border-t border-border pt-4 text-sm">
+          <div className="mt-4 space-y-1 border-t border-border pt-3 text-xs">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium">${subtotal.toFixed(2)}</span>
+              <span className="font-medium">₱{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tax (8%)</span>
-              <span className="font-medium">${tax.toFixed(2)}</span>
+              <span className="font-medium">₱{tax.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between pt-2 text-base">
+            <div className="flex justify-between pt-1.5 text-sm">
               <span className="font-semibold">Total</span>
-              <span className="font-semibold">${total.toFixed(2)}</span>
+              <span className="font-semibold">₱{total.toFixed(2)}</span>
             </div>
-          </div>
-
-          <div className="mt-5">
-            <label className="text-sm font-medium">Payment Method</label>
-            <select
-              value={payment}
-              onChange={(e) => setPayment(e.target.value)}
-              className="mt-1.5 h-10 w-full rounded-md border border-border bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-            >
-              <option>Card</option>
-              <option>Cash</option>
-              <option>Mobile</option>
-            </select>
           </div>
 
           <button
             onClick={complete}
-            className="mt-4 h-11 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="mt-3 h-9 w-full rounded-md bg-primary text-xs font-medium text-primary-foreground hover:bg-primary/90"
           >
             Complete Sale
           </button>
           {cart.length > 0 && (
             <button
               onClick={clearCart}
-              className="mt-2 h-9 w-full rounded-md text-xs text-muted-foreground hover:text-foreground"
+              className="mt-2 h-8 w-full rounded-md text-[11px] text-muted-foreground hover:text-foreground"
             >
               Clear cart
             </button>

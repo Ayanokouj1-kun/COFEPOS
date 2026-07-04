@@ -13,6 +13,8 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StoreProvider } from "../lib/store";
+import { AuthProvider, useAuth } from "../lib/auth";
+import { LoginScreen } from "../components/LoginScreen";
 
 function NotFoundComponent() {
   return (
@@ -80,10 +82,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Mia's Café — POS & Inventory" },
-      { name: "description", content: "Simple point-of-sale and inventory tools to run your café with ease." },
+      {
+        name: "description",
+        content: "Simple point-of-sale and inventory tools to run your café with ease.",
+      },
       { name: "author", content: "Mia's Café" },
       { property: "og:title", content: "Mia's Café — POS & Inventory" },
-      { property: "og:description", content: "Simple point-of-sale and inventory tools to run your café with ease." },
+      {
+        property: "og:description",
+        content: "Simple point-of-sale and inventory tools to run your café with ease.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
@@ -116,16 +124,36 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+/** Gate: show login if not authenticated, otherwise show the app */
+function AuthGate() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!user) return <LoginScreen />;
+
+  return (
+    <StoreProvider>
+      <Outlet />
+      <Toaster position="top-right" richColors />
+    </StoreProvider>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StoreProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
-        <Toaster position="top-right" richColors />
-      </StoreProvider>
+      <AuthProvider>
+        <AuthGate />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

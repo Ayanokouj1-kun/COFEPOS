@@ -1,7 +1,21 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { LayoutGrid, ShoppingCart, Package, Tag, Bell, Menu, Plus, X } from "lucide-react";
+import {
+  LayoutGrid,
+  ShoppingCart,
+  Package,
+  Tag,
+  Bell,
+  Plus,
+  X,
+  LogOut,
+  Coffee,
+  Sun,
+  Moon,
+  Shield,
+} from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
@@ -28,8 +42,28 @@ export function AppLayout({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const { notifications, clearNotifications } = useStore();
+  const { notifications, clearNotifications, isAdmin, displayName, role } = useStore();
+  const { signOut } = useAuth();
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("mias-cafe-theme") || "light";
+    }
+    return "light";
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const root = window.document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("mias-cafe-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
 
   useEffect(() => {
     if (!notifOpen) return;
@@ -43,21 +77,41 @@ export function AppLayout({
   }, [notifOpen]);
 
   return (
-    <div className="min-h-screen bg-background p-3 sm:p-6 lg:p-8">
-      <div className="mx-auto flex max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-30px_rgba(80,50,20,0.25)] ring-1 ring-border">
+    <div className="min-h-screen bg-background p-2 sm:p-4">
+      <div className="mx-auto flex max-w-[1400px] flex-col overflow-hidden rounded-xl bg-card shadow-[0_20px_60px_-30px_rgba(80,50,20,0.25)] ring-1 ring-border">
         {/* Header */}
-        <header className="flex h-16 items-center justify-between border-b border-border px-4 sm:px-6">
+        <header className="flex h-14 items-center justify-between border-b border-border px-4">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileOpen((o) => !o)}
-              className="grid h-9 w-9 place-items-center rounded-md text-foreground/70 hover:bg-muted"
-              aria-label="Toggle menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <span className="font-serif text-lg font-semibold tracking-tight">Mia's Café</span>
+            <div className="flex items-center gap-2">
+              <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
+                <Coffee className="h-4.5 w-4.5" />
+              </div>
+              <span className="font-serif text-lg font-semibold tracking-tight">Mia's Café</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5 ml-2">
+              <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                {displayName || "User"}
+              </span>
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                  role === "admin" || role === "superadmin"
+                    ? "bg-primary/15 text-primary"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {role}
+              </span>
+            </div>
           </div>
-          <div className="relative flex items-center gap-3" ref={popoverRef}>
+          <div className="relative flex items-center gap-2" ref={popoverRef}>
+            <button
+              onClick={toggleTheme}
+              className="grid h-9 w-9 place-items-center rounded-full text-foreground/70 hover:bg-muted cursor-pointer transition active:scale-95"
+              aria-label="Toggle theme"
+              title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+            >
+              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
             <button
               onClick={() => setNotifOpen((o) => !o)}
               className="relative grid h-9 w-9 place-items-center rounded-full text-foreground/70 hover:bg-muted"
@@ -84,7 +138,9 @@ export function AppLayout({
                   )}
                 </div>
                 {notifications.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">You're all caught up.</p>
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    You're all caught up.
+                  </p>
                 ) : (
                   <ul className="max-h-72 space-y-1 overflow-y-auto">
                     {notifications.map((n) => (
@@ -97,23 +153,33 @@ export function AppLayout({
                 )}
               </div>
             )}
-            {headerAction ?? (
+            {headerAction !== undefined ? (
+              headerAction
+            ) : isAdmin && pathname !== "/new-sale" ? (
               <Link
                 to="/new-sale"
                 className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
               >
                 New Sale <Plus className="h-4 w-4" />
               </Link>
-            )}
+            ) : null}
+            <button
+              onClick={signOut}
+              className="grid h-9 w-9 place-items-center rounded-full text-foreground/70 hover:bg-muted"
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </header>
 
-        <div className="flex min-h-[720px] relative">
+        <div className="flex min-h-[500px] relative">
           {/* Sidebar */}
           <aside
             className={`${
               mobileOpen ? "block" : "hidden"
-            } absolute inset-y-0 left-0 z-20 w-56 border-r border-border bg-card p-4 md:static md:block md:w-60 md:shrink-0`}
+            } absolute inset-y-0 left-0 z-20 w-52 border-r border-border bg-card p-3 md:static md:block md:w-52 md:shrink-0`}
           >
             <div className="flex items-center justify-end md:hidden">
               <button
@@ -124,19 +190,16 @@ export function AppLayout({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <nav className="flex flex-col gap-1.5 pt-2">
+            <nav className="flex flex-col gap-1 pt-1">
               {nav.map((item) => {
-                const active =
-                  item.to === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(item.to);
+                const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                       active
                         ? "bg-sidebar-active text-sidebar-active-foreground"
                         : "text-foreground/70 hover:bg-muted"
@@ -147,11 +210,30 @@ export function AppLayout({
                   </Link>
                 );
               })}
+
+              {/* SuperAdmin Panel — superadmin only */}
+              {role === "superadmin" && (
+                <>
+                  <div className="my-1 border-t border-border/60" />
+                  <Link
+                    to="/admin"
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      pathname.startsWith("/admin")
+                        ? "bg-primary/15 text-primary"
+                        : "text-primary/70 hover:bg-primary/10"
+                    }`}
+                  >
+                    <Shield className="h-4 w-4" />
+                    SuperAdmin Panel
+                  </Link>
+                </>
+              )}
             </nav>
           </aside>
 
           {/* Main */}
-          <main className="flex-1 p-5 sm:p-8">{children ?? <Outlet />}</main>
+          <main className="flex-1 p-4 sm:p-5">{children ?? <Outlet />}</main>
         </div>
       </div>
     </div>
