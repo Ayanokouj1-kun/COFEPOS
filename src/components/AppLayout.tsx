@@ -13,6 +13,7 @@ import {
   Moon,
   Shield,
   Pencil,
+  Eye,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useStore } from "@/lib/store";
@@ -49,6 +50,7 @@ export function AppLayout({
   const popoverRef = useRef<HTMLDivElement>(null);
   const [showAddNotif, setShowAddNotif] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+  const [readingNotif, setReadingNotif] = useState<{ message: string; time: number } | null>(null);
 
   const handleAddAnnouncement = (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,9 +202,21 @@ export function AppLayout({
                 ) : (
                   <ul className="max-h-72 space-y-1 overflow-y-auto">
                     {notifications.map((n) => (
-                      <li key={n.id} className="rounded-md px-2 py-2 text-sm hover:bg-muted">
-                        <p>{n.message}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">{formatAgo(n.time)}</p>
+                      <li key={n.id} className="group flex items-start justify-between gap-2 rounded-md px-2 py-2 hover:bg-muted/60 transition">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs leading-relaxed line-clamp-2">{n.message}</p>
+                          <p className="mt-0.5 text-[10px] text-muted-foreground">{formatAgo(n.time)}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setReadingNotif({ message: n.message, time: n.time });
+                            setNotifOpen(false);
+                          }}
+                          className="mt-0.5 shrink-0 inline-flex h-5 items-center gap-1 rounded bg-secondary/80 px-1.5 text-[9px] font-medium text-secondary-foreground opacity-0 group-hover:opacity-100 hover:bg-secondary transition cursor-pointer"
+                        >
+                          <Eye className="h-2.5 w-2.5" />
+                          Read
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -292,6 +306,46 @@ export function AppLayout({
           <main className="flex-1 p-4 sm:p-5">{children ?? <Outlet />}</main>
         </div>
       </div>
+
+      {/* ── Notification Reading Modal ─────────────────────── */}
+      {readingNotif && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-sm"
+          onClick={() => setReadingNotif(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="grid h-8 w-8 place-items-center rounded-full bg-primary/10">
+                  <Bell className="h-4 w-4 text-primary" />
+                </div>
+                <h2 className="text-sm font-semibold">Notification</h2>
+              </div>
+              <button
+                onClick={() => setReadingNotif(null)}
+                className="grid h-7 w-7 place-items-center rounded-md hover:bg-muted transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="rounded-lg bg-muted/40 border border-border/40 p-4">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{readingNotif.message}</p>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">{formatAgo(readingNotif.time)}</p>
+            <div className="mt-5 flex justify-end">
+              <button
+                onClick={() => setReadingNotif(null)}
+                className="h-9 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
