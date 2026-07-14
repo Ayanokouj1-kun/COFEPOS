@@ -83,8 +83,8 @@ export function AppLayout({
         <header className="flex h-14 items-center justify-between border-b border-border px-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
-                <Coffee className="h-4.5 w-4.5" />
+              <div className="h-8 w-8 overflow-hidden rounded-lg">
+                <img src="/favicon.png" className="h-full w-full object-contain" alt="Logo" />
               </div>
               <span className="font-serif text-lg font-semibold tracking-tight">CafePOS</span>
             </div>
