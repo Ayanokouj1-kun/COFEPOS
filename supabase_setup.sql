@@ -38,3 +38,43 @@ CREATE POLICY "Allow public to delete product-images"
 ON storage.objects FOR DELETE
 TO public
 USING (bucket_id = 'product-images');
+
+-- ═══════════════════════════════════════════════════════════════
+-- INVENTORY IMAGES
+-- ═══════════════════════════════════════════════════════════════
+
+-- Ensure image column exists in inventory table
+ALTER TABLE inventory ADD COLUMN IF NOT EXISTS image TEXT;
+
+-- Create inventory-images storage bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('inventory-images', 'inventory-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Allow public read access to inventory-images
+DROP POLICY IF EXISTS "Allow public read access to inventory-images" ON storage.objects;
+CREATE POLICY "Allow public read access to inventory-images"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'inventory-images');
+
+-- Allow public/anon to upload to inventory-images
+DROP POLICY IF EXISTS "Allow public to upload to inventory-images" ON storage.objects;
+CREATE POLICY "Allow public to upload to inventory-images"
+ON storage.objects FOR INSERT
+TO public
+WITH CHECK (bucket_id = 'inventory-images');
+
+-- Allow public/anon to update inventory-images
+DROP POLICY IF EXISTS "Allow public to update inventory-images" ON storage.objects;
+CREATE POLICY "Allow public to update inventory-images"
+ON storage.objects FOR UPDATE
+TO public
+USING (bucket_id = 'inventory-images');
+
+-- Allow public/anon to delete inventory-images
+DROP POLICY IF EXISTS "Allow public to delete inventory-images" ON storage.objects;
+CREATE POLICY "Allow public to delete inventory-images"
+ON storage.objects FOR DELETE
+TO public
+USING (bucket_id = 'inventory-images');

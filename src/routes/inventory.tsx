@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useStore } from "@/lib/store";
-import { Coffee, Milk, GlassWater, Droplet, Plus, X } from "lucide-react";
+import { Plus, X, UploadCloud, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+import { supabase } from "@/lib/supabase";
+import { PLACEHOLDER_IMAGE } from "@/lib/data";
 
 export const Route = createFileRoute("/inventory")({
   head: () => ({
@@ -18,40 +20,90 @@ export const Route = createFileRoute("/inventory")({
   component: Inventory,
 });
 
-const iconFor: Record<string, typeof Coffee> = {
-  "Coffee Beans": Coffee,
-  "Fresh Milk": Milk,
-  "16 oz Cups": GlassWater,
-  "Bottled Water": Droplet,
-};
-
 function Inventory() {
   const { inventory, addStock, deleteStock, isAdmin } = useStore();
   const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [form, setForm] = useState({ name: "", available: "", status: "in" as "in" | "low" });
+  const [form, setForm] = useState({
+    name: "",
+    available: "",
+    status: "in" as "in" | "low",
+    image: "",
+  });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const startEdit = (item: (typeof inventory)[0]) => {
     setIsEditing(true);
-    setForm({ name: item.name, available: item.available, status: item.status });
+    setForm({ name: item.name, available: item.available, status: item.status, image: item.image || "" });
     setOpen(true);
   };
 
   const close = () => {
-    setForm({ name: "", available: "", status: "in" });
+    setForm({ name: "", available: "", status: "in", image: "" });
     setIsEditing(false);
     setOpen(false);
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image file size should be less than 5MB.");
+      return;
+    }
+
+    setUploading(true);
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Math.random().toString(36).substring(2, 15)}-${Date.now()}.${fileExt}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from("inventory-images")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("inventory-images")
+        .getPublicUrl(fileName);
+
+      setForm((prev) => ({ ...prev, image: urlData.publicUrl }));
+      toast.success("Image uploaded successfully!");
+    } catch (err: any) {
+      console.error("Storage upload error:", err);
+      toast.error(`Upload failed: ${err.message || "Unknown error"}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setForm((prev) => ({ ...prev, image: "" }));
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (uploading) {
+      toast.error("Please wait for the image upload to complete.");
+      return;
+    }
     if (!form.name.trim() || !form.available.trim()) {
       toast.error("Enter an item name and quantity.");
       return;
     }
-    addStock({ name: form.name.trim(), available: form.available.trim(), status: form.status });
+    addStock({
+      name: form.name.trim(),
+      available: form.available.trim(),
+      status: form.status,
+      image: form.image,
+    });
     toast.success(isEditing ? `${form.name} updated` : `${form.name} stock updated`);
     close();
   };
@@ -80,61 +132,69 @@ function Inventory() {
             </tr>
           </thead>
           <tbody>
-            {inventory.map((r) => {
-              const Icon = iconFor[r.name] ?? Coffee;
-              return (
-                <tr
-                  key={r.name}
-                  className="border-b border-border/60 last:border-0 hover:bg-muted/10"
+            {inventory.map((r) => (
+              <tr
+                key={r.name}
+                className="border-b border-border/60 last:border-0 hover:bg-muted/10"
+              >
+                <td className="py-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-7 w-7 shrink-0 overflow-hidden rounded-md bg-muted flex items-center justify-center">
+                      {r.image ? (
+                        <img
+                          src={r.image}
+                          alt={r.name}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = PLACEHOLDER_IMAGE;
+                          }}
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">📦</span>
+                      )}
+                    </div>
+                    <span className="font-medium text-xs">{r.name}</span>
+                  </div>
+                </td>
+                <td
+                  className={`py-2 text-xs font-medium ${r.status === "low" ? "text-orange-600" : ""}`}
                 >
-                  <td className="py-2">
-                    <div className="flex items-center gap-2.5">
-                      <span className="grid h-7 w-7 place-items-center rounded-md bg-muted text-foreground/60">
-                        <Icon className="h-3.5 w-3.5" />
-                      </span>
-                      <span className="font-medium text-xs">{r.name}</span>
+                  {r.available}
+                </td>
+                <td className="py-2 text-left">
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      r.status === "low"
+                        ? "bg-warning text-warning-foreground"
+                        : "bg-success text-success-foreground"
+                    }`}
+                  >
+                    {r.status === "low" ? "Low Stock" : "In Stock"}
+                  </span>
+                </td>
+                {isAdmin && (
+                  <td className="py-2 text-right">
+                    <div className="flex justify-end gap-1.5">
+                      <button
+                        onClick={() => startEdit(r)}
+                        className="h-6 rounded bg-secondary px-2 text-[10px] font-medium text-secondary-foreground hover:bg-secondary/80 cursor-pointer transition active:scale-95"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          setItemToDelete(r.name);
+                          setDeleteConfirmOpen(true);
+                        }}
+                        className="h-6 rounded bg-destructive/10 px-2 text-[10px] font-medium text-destructive hover:bg-destructive/20 cursor-pointer transition active:scale-95"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
-                  <td
-                    className={`py-2 text-xs font-medium ${r.status === "low" ? "text-orange-600" : ""}`}
-                  >
-                    {r.available}
-                  </td>
-                  <td className="py-2 text-left">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                        r.status === "low"
-                          ? "bg-warning text-warning-foreground"
-                          : "bg-success text-success-foreground"
-                      }`}
-                    >
-                      {r.status === "low" ? "Low Stock" : "In Stock"}
-                    </span>
-                  </td>
-                  {isAdmin && (
-                    <td className="py-2 text-right">
-                      <div className="flex justify-end gap-1.5">
-                        <button
-                          onClick={() => startEdit(r)}
-                          className="h-6 rounded bg-secondary px-2 text-[10px] font-medium text-secondary-foreground hover:bg-secondary/80 cursor-pointer transition active:scale-95"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => {
-                            setItemToDelete(r.name);
-                            setDeleteConfirmOpen(true);
-                          }}
-                          className="h-6 rounded bg-destructive/10 px-2 text-[10px] font-medium text-destructive hover:bg-destructive/20 cursor-pointer transition active:scale-95"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
+                )}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -189,6 +249,54 @@ function Inventory() {
                   <option value="low">Low Stock</option>
                 </select>
               </label>
+
+              <div className="block text-sm">
+                <span className="text-muted-foreground">Item Picture</span>
+                <div className="mt-1.5 flex items-center gap-4">
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted flex items-center justify-center">
+                    {form.image ? (
+                      <img
+                        src={form.image}
+                        alt="Item preview"
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = PLACEHOLDER_IMAGE;
+                        }}
+                      />
+                    ) : (
+                      <span className="text-2xl text-muted-foreground">📦</span>
+                    )}
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
+                        <Loader2 className="h-5 w-5 animate-spin text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-secondary px-3.5 text-xs font-semibold text-secondary-foreground hover:bg-secondary/80 transition active:scale-95">
+                      <UploadCloud className="h-3.5 w-3.5" />
+                      <span>{form.image ? "Change Picture" : "Upload Picture"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="sr-only"
+                        disabled={uploading}
+                      />
+                    </label>
+                    {form.image && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        disabled={uploading}
+                        className="inline-flex h-7 items-center justify-center rounded bg-destructive/10 px-2.5 text-[11px] font-medium text-destructive hover:bg-destructive/20 transition active:scale-95 disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button
@@ -200,8 +308,10 @@ function Inventory() {
               </button>
               <button
                 type="submit"
-                className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                disabled={uploading}
+                className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
               >
+                {uploading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Save
               </button>
             </div>

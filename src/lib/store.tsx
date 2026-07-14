@@ -13,7 +13,7 @@ export type Product = {
   image: string;
   category: string;
 };
-export type InventoryItem = { name: string; available: string; status: "in" | "low" };
+export type InventoryItem = { name: string; available: string; status: "in" | "low"; image?: string };
 export type CartItem = { id: string; name: string; price: number; qty: number };
 export type Notification = { id: string; message: string; time: number };
 
@@ -90,7 +90,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const [prodRes, invRes, txRes, notifRes] = await Promise.all([
           // Only load rows that have NOT been soft-deleted
           supabase.from("products").select("*").is("deleted_at", null),
-          supabase.from("inventory").select("name, available, status").is("deleted_at", null),
+          supabase.from("inventory").select("name, available, status, image").is("deleted_at", null),
           supabase.from("transactions").select("*").order("time", { ascending: false }),
           supabase.from("notifications").select("*").order("time", { ascending: false }),
         ]);
@@ -269,7 +269,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         supabase
           .from("inventory")
           .upsert(
-            { name: item.name, available: item.available, status: item.status },
+            { name: item.name, available: item.available, status: item.status, image: item.image || "" },
             { onConflict: "name" },
           )
           .then(({ error }) => {
