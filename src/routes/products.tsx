@@ -167,17 +167,17 @@ function Products() {
         />
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {filteredProducts.map((p) => {
           const profit = p.price - p.cost;
           const category = (p.category as Category) || getAutomaticCategory(p.name);
           return (
             <div
               key={p.id}
-              className="flex flex-col justify-between gap-4 rounded-xl border border-border bg-card p-4"
+              className="flex flex-col justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-sm hover:shadow-md transition-all duration-200"
             >
-              <div className="flex gap-4">
-                <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+              <div className="flex flex-col gap-3">
+                <div className="aspect-square w-full overflow-hidden rounded-lg bg-muted">
                   <img
                     src={p.image || PLACEHOLDER_IMAGE}
                     alt={p.name}
@@ -190,14 +190,14 @@ function Products() {
                     className="h-full w-full object-cover"
                   />
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <h3 className="truncate text-base font-semibold">{p.name}</h3>
-                    <span className="inline-flex items-center rounded-full border border-border/40 bg-secondary/80 px-2 py-0.5 text-[10px] font-medium text-secondary-foreground">
+                    <h3 className="truncate text-xs font-semibold flex-1">{p.name}</h3>
+                    <span className="inline-flex items-center rounded-full border border-border/40 bg-secondary/80 px-2 py-0.5 text-[9px] font-medium text-secondary-foreground">
                       {category}
                     </span>
                   </div>
-                  <dl className="mt-1.5 space-y-0.5 text-xs">
+                  <dl className="mt-1.5 space-y-0.5 text-[10px]">
                     <div className="flex justify-between">
                       <dt className="text-muted-foreground">Price</dt>
                       <dd className="font-medium">₱{p.price.toFixed(2)}</dd>
@@ -215,10 +215,10 @@ function Products() {
               </div>
 
               {isAdmin && (
-                <div className="mt-2 flex justify-end gap-2 border-t border-border/40 pt-2">
+                <div className="mt-1.5 flex justify-end gap-1.5 border-t border-border/40 pt-2">
                   <button
                     onClick={() => startEdit(p)}
-                    className="h-7 cursor-pointer rounded bg-secondary px-2.5 text-xs font-medium text-secondary-foreground transition hover:bg-secondary/80 active:scale-95"
+                    className="h-7 flex-1 cursor-pointer rounded bg-secondary px-2 text-[10px] font-medium text-secondary-foreground transition hover:bg-secondary/80 active:scale-95"
                   >
                     Edit
                   </button>
@@ -227,7 +227,7 @@ function Products() {
                       setProductToDelete({ id: p.id, name: p.name });
                       setDeleteConfirmOpen(true);
                     }}
-                    className="h-7 cursor-pointer rounded bg-destructive/10 px-2.5 text-xs font-medium text-destructive transition hover:bg-destructive/20 active:scale-95"
+                    className="h-7 cursor-pointer rounded bg-destructive/10 px-2 text-[10px] font-medium text-destructive transition hover:bg-destructive/20 active:scale-95"
                   >
                     Delete
                   </button>
