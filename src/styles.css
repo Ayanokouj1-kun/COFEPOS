@@ -122,12 +122,3 @@
     -webkit-font-smoothing: antialiased;
   }
 }
-
-/* ── Premium Minimalist Icons ──────────────────────────── */
-/* Lucide icons render as inline SVGs with data-slot="icon" */
-svg[class*="lucide"],
-svg[data-slot="icon"] {
-  stroke-width: 1.5 !important;
-  shape-rendering: geometricPrecision;
-  transition: color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
-}
