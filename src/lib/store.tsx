@@ -67,9 +67,47 @@ const CART_KEY = "mias-cafe-cart-v1";
 function mergeImages(dbProducts: Product[]): Product[] {
   return dbProducts.map((p) => ({
     ...p,
+    // PostgREST returns NUMERIC columns as strings
+    price: Number(p.price) || 0,
+    cost: Number(p.cost) || 0,
     image: seedProducts.find((sp) => sp.id === p.id)?.image || p.image || PLACEHOLDER_IMAGE,
     category: p.category || getAutomaticCategory(p.name),
   }));
+}
+
+/** Normalize a raw Supabase transaction row into the Transaction shape the UI expects */
+function normalizeTransaction(raw: Record<string, unknown>): Transaction {
+  let items: CartItem[] = [];
+  const rawItems = raw.items;
+  if (typeof rawItems === "string") {
+    try {
+      const parsed = JSON.parse(rawItems) as unknown;
+      items = Array.isArray(parsed) ? (parsed as CartItem[]) : [];
+    } catch {
+      items = [];
+    }
+  } else if (Array.isArray(rawItems)) {
+    items = rawItems as CartItem[];
+  }
+
+  items = items.map((item) => ({
+    ...item,
+    price: Number(item.price) || 0,
+    qty: Number(item.qty) || 0,
+  }));
+
+  const status = raw.status === "voided" ? "voided" : "completed";
+
+  return {
+    id: String(raw.id ?? ""),
+    items,
+    subtotal: Number(raw.subtotal) || 0,
+    tax: Number(raw.tax) || 0,
+    total: Number(raw.total) || 0,
+    payment: String(raw.payment ?? ""),
+    time: Number(raw.time) || 0,
+    status,
+  };
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -102,7 +140,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setInventory(invRes.data as InventoryItem[]);
         }
         if (txRes.data) {
-          setTransactions(txRes.data as Transaction[]);
+          setTransactions(
+            (txRes.data as Record<string, unknown>[]).map(normalizeTransaction),
+          );
         }
         if (notifRes.data) {
           setNotifications(notifRes.data as Notification[]);
@@ -372,7 +412,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           .from("transactions")
           .insert({
             id: txId,
-            items: JSON.stringify(items),
+            // Pass array directly — JSONB column; stringifying nests a string
+            items,
             subtotal,
             tax,
             total,
