@@ -78,3 +78,11 @@ CREATE POLICY "Allow public to delete inventory-images"
 ON storage.objects FOR DELETE
 TO public
 USING (bucket_id = 'inventory-images');
+
+-- ═══════════════════════════════════════════════════════════════
+-- DATA UPDATES
+-- ═══════════════════════════════════════════════════════════════
+
+-- Rename display name of barista role to "Barista"
+UPDATE users SET display_name = 'Barista' WHERE username = 'barista';
+

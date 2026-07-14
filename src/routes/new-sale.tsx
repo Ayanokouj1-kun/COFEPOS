@@ -47,8 +47,8 @@ function NewSale() {
   );
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const tax = subtotal * 0.08;
-  const total = subtotal + tax;
+  const tax = 0;
+  const total = subtotal;
 
   const complete = () => {
     if (cart.length === 0) {
@@ -174,14 +174,6 @@ function NewSale() {
           )}
 
           <div className="mt-4 space-y-1 border-t border-border pt-3 text-xs">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium">₱{subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Tax (8%)</span>
-              <span className="font-medium">₱{tax.toFixed(2)}</span>
-            </div>
             <div className="flex justify-between pt-1.5 text-sm">
               <span className="font-semibold">Total</span>
               <span className="font-semibold">₱{total.toFixed(2)}</span>
