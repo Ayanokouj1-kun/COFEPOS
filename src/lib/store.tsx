@@ -252,8 +252,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       // ── addStock: admin-only ───────────────────────────────
       addStock: (item) => {
-        if (!isAdmin) {
-          toast.error("Only admins can update stock.");
+        if (!isAdmin && role !== "barista") {
+          toast.error("Only admins and baristas can update stock.");
           return;
         }
         setInventory((prev) => {

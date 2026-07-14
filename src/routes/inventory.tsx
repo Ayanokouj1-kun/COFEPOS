@@ -35,7 +35,7 @@ const adjustQuantity = (current: string, delta: number): string => {
 };
 
 function Inventory() {
-  const { inventory, addStock, deleteStock, isAdmin } = useStore();
+  const { inventory, addStock, deleteStock, isAdmin, role } = useStore();
   const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -204,7 +204,7 @@ function Inventory() {
                 </td>
                 <td className="py-2 text-xs font-medium">
                   <div className="flex items-center gap-2">
-                    {isAdmin && (
+                    {(isAdmin || role === "barista") && (
                       <button
                         onClick={() => handleAdjustStock(r, -1)}
                         className="h-6 w-6 flex items-center justify-center rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer transition active:scale-95"
@@ -216,7 +216,7 @@ function Inventory() {
                     <span className={r.status === "low" ? "text-orange-600" : ""}>
                       {r.available}
                     </span>
-                    {isAdmin && (
+                    {(isAdmin || role === "barista") && (
                       <button
                         onClick={() => handleAdjustStock(r, 1)}
                         className="h-6 w-6 flex items-center justify-center rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer transition active:scale-95"

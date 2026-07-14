@@ -12,10 +12,12 @@ import {
   Sun,
   Moon,
   Shield,
+  Pencil,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
@@ -42,9 +44,20 @@ export function AppLayout({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const { notifications, clearNotifications, isAdmin, displayName, role } = useStore();
+  const { notifications, clearNotifications, notify, isAdmin, displayName, role } = useStore();
   const { signOut } = useAuth();
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [showAddNotif, setShowAddNotif] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+
+  const handleAddAnnouncement = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!announcement.trim()) return;
+    notify(`📢 [${displayName || "Admin"}]: ${announcement.trim()}`);
+    setAnnouncement("");
+    setShowAddNotif(false);
+    toast.success("Announcement posted!");
+  };
   const [theme, setTheme] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("mias-cafe-theme") || "light";
@@ -126,17 +139,60 @@ export function AppLayout({
             </button>
             {notifOpen && (
               <div className="absolute right-0 top-11 z-30 w-72 rounded-lg border border-border bg-popover p-3 shadow-lg">
-                <div className="flex items-center justify-between pb-2">
-                  <p className="text-sm font-semibold">Notifications</p>
+                <div className="flex items-center justify-between pb-2 border-b border-border/60 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold">Notifications</p>
+                    {(role === "admin" || role === "superadmin") && (
+                      <button
+                        onClick={() => setShowAddNotif((s) => !s)}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition active:scale-95"
+                        title="Write announcement"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
                   {notifications.length > 0 && (
                     <button
                       onClick={clearNotifications}
-                      className="text-xs text-muted-foreground hover:text-foreground"
+                      className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                       Clear all
                     </button>
                   )}
                 </div>
+
+                {showAddNotif && (
+                  <form onSubmit={handleAddAnnouncement} className="mb-3 space-y-1.5 pt-1">
+                    <textarea
+                      required
+                      value={announcement}
+                      onChange={(e) => setAnnouncement(e.target.value)}
+                      placeholder="Write an announcement..."
+                      rows={2}
+                      className="w-full rounded-md border border-border bg-card p-1.5 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    <div className="flex justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddNotif(false);
+                          setAnnouncement("");
+                        }}
+                        className="h-6 rounded border border-border px-2 text-[10px] hover:bg-muted"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="h-6 rounded bg-primary px-2.5 text-[10px] font-medium text-primary-foreground hover:bg-primary/90"
+                      >
+                        Post
+                      </button>
+                    </div>
+                  </form>
+                )}
+
                 {notifications.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">
                     You're all caught up.
