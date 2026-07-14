@@ -1,19 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useStore } from "@/lib/store";
-import { Plus, X } from "lucide-react";
+import { Plus, X, UploadCloud, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { CATEGORIES, getAutomaticCategory, type Category } from "@/lib/categories";
 import { PLACEHOLDER_IMAGE } from "@/lib/data";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/products")({
   head: () => ({
     meta: [
-      { title: "Products & Costing — Mia's Café" },
+      { title: "Products & Costing — CafePOS" },
       { name: "description", content: "Manage café menu items, prices, and cost margins." },
-      { property: "og:title", content: "Products & Costing — Mia's Café" },
+      { property: "og:title", content: "Products & Costing — CafePOS" },
       { property: "og:description", content: "Manage café menu items, prices, and cost margins." },
     ],
   }),
@@ -29,10 +30,12 @@ function Products() {
     price: "",
     cost: "",
     category: "Coffee" as Category,
+    image: "",
   });
   const [isCategoryManual, setIsCategoryManual] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const startEdit = (p: (typeof products)[0]) => {
     setEditingId(p.id);
@@ -41,20 +44,70 @@ function Products() {
       price: p.price.toString(),
       cost: p.cost.toString(),
       category: (p.category as Category) || getAutomaticCategory(p.name),
+      image: p.image || "",
     });
     setIsCategoryManual(true);
     setOpen(true);
   };
 
   const close = () => {
-    setForm({ name: "", price: "", cost: "", category: "Coffee" as Category });
+    setForm({ name: "", price: "", cost: "", category: "Coffee" as Category, image: "" });
     setIsCategoryManual(false);
     setEditingId(null);
     setOpen(false);
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image file size should be less than 5MB.");
+      return;
+    }
+
+    setUploading(true);
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Math.random().toString(36).substring(2, 15)}-${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(filePath);
+
+      setForm((prev) => ({ ...prev, image: urlData.publicUrl }));
+      toast.success("Image uploaded successfully!");
+    } catch (err: any) {
+      console.error("Storage upload error:", err);
+      toast.error(`Upload failed: ${err.message || "Unknown error"}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setForm((prev) => ({ ...prev, image: "" }));
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (uploading) {
+      toast.error("Please wait for the image upload to complete.");
+      return;
+    }
     const price = Number(form.price);
     const cost = Number(form.cost);
     if (!form.name.trim() || Number.isNaN(price) || Number.isNaN(cost)) {
@@ -62,10 +115,22 @@ function Products() {
       return;
     }
     if (editingId) {
-      updateProduct(editingId, { name: form.name.trim(), price, cost, category: form.category });
+      updateProduct(editingId, {
+        name: form.name.trim(),
+        price,
+        cost,
+        category: form.category,
+        image: form.image,
+      });
       toast.success(`${form.name.trim()} updated`);
     } else {
-      addProduct({ name: form.name.trim(), price, cost, category: form.category });
+      addProduct({
+        name: form.name.trim(),
+        price,
+        cost,
+        category: form.category,
+        image: form.image,
+      });
       toast.success(`${form.name.trim()} added to menu`);
     }
     close();
@@ -209,6 +274,55 @@ function Products() {
                   ))}
                 </select>
               </label>
+
+              <div className="block text-sm">
+                <span className="text-muted-foreground">Product Picture</span>
+                <div className="mt-1.5 flex items-center gap-4">
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted flex items-center justify-center">
+                    {form.image ? (
+                      <img
+                        src={form.image}
+                        alt="Product preview"
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = PLACEHOLDER_IMAGE;
+                        }}
+                      />
+                    ) : (
+                      <span className="text-2xl text-muted-foreground">☕</span>
+                    )}
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
+                        <Loader2 className="h-5 w-5 animate-spin text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-secondary px-3.5 text-xs font-semibold text-secondary-foreground hover:bg-secondary/80 transition active:scale-95">
+                      <UploadCloud className="h-3.5 w-3.5" />
+                      <span>{form.image ? "Change Picture" : "Upload Picture"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="sr-only"
+                        disabled={uploading}
+                      />
+                    </label>
+                    {form.image && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        disabled={uploading}
+                        className="inline-flex h-7 items-center justify-center rounded bg-destructive/10 px-2.5 text-[11px] font-medium text-destructive hover:bg-destructive/20 transition active:scale-95 disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <label className="block text-sm">
                   <span className="text-muted-foreground">Price (₱)</span>
@@ -246,8 +360,10 @@ function Products() {
               </button>
               <button
                 type="submit"
-                className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                disabled={uploading}
+                className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
               >
+                {uploading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Save
               </button>
             </div>

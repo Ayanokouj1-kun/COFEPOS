@@ -9,9 +9,9 @@ import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 export const Route = createFileRoute("/inventory")({
   head: () => ({
     meta: [
-      { title: "Inventory — Mia's Café" },
+      { title: "Inventory — CafePOS" },
       { name: "description", content: "Track café stock levels and add new inventory." },
-      { property: "og:title", content: "Inventory — Mia's Café" },
+      { property: "og:title", content: "Inventory — CafePOS" },
       { property: "og:description", content: "Track café stock levels and add new inventory." },
     ],
   }),

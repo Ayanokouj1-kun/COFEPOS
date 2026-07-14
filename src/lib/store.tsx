@@ -44,7 +44,7 @@ type Store = {
   clearCart: () => void;
   addProduct: (p: Omit<Product, "id" | "image"> & { image?: string }) => void;
   deleteProduct: (id: string) => void;
-  updateProduct: (id: string, p: Omit<Product, "id" | "image">) => void;
+  updateProduct: (id: string, p: Omit<Product, "id" | "image"> & { image?: string }) => void;
   addStock: (item: InventoryItem) => void;
   deleteStock: (name: string) => void;
   notify: (message: string) => void;
@@ -178,7 +178,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
         supabase
           .from("products")
-          .upsert({ id, name: p.name, price: p.price, cost: p.cost, category, image: "" })
+          .upsert({ id, name: p.name, price: p.price, cost: p.cost, category, image: p.image || "" })
           .then(({ error }) => {
             if (error) console.error("Supabase addProduct error:", error);
           });
@@ -233,13 +233,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setProducts((prev) =>
           prev.map((item) =>
             item.id === id
-              ? { ...item, name: p.name, price: p.price, cost: p.cost, category }
+              ? { ...item, name: p.name, price: p.price, cost: p.cost, category, image: p.image !== undefined ? (p.image || PLACEHOLDER_IMAGE) : item.image }
               : item,
           ),
         );
+        const updatePayload: any = { name: p.name, price: p.price, cost: p.cost, category };
+        if (p.image !== undefined) {
+          updatePayload.image = p.image;
+        }
         supabase
           .from("products")
-          .update({ name: p.name, price: p.price, cost: p.cost, category })
+          .update(updatePayload)
           .eq("id", id)
           .then(({ error }) => {
             if (error) console.error("Supabase updateProduct error:", error);

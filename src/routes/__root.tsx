@@ -81,13 +81,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Mia's Café — POS & Inventory" },
+      { title: "CafePOS — POS & Inventory" },
       {
         name: "description",
         content: "Simple point-of-sale and inventory tools to run your café with ease.",
       },
-      { name: "author", content: "Mia's Café" },
-      { property: "og:title", content: "Mia's Café — POS & Inventory" },
+      { name: "author", content: "CafePOS" },
+      { property: "og:title", content: "CafePOS — POS & Inventory" },
       {
         property: "og:description",
         content: "Simple point-of-sale and inventory tools to run your café with ease.",
@@ -101,7 +101,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
     ],
   }),
   shellComponent: RootShell,

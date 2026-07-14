@@ -86,7 +86,7 @@ export function AppLayout({
               <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
                 <Coffee className="h-4.5 w-4.5" />
               </div>
-              <span className="font-serif text-lg font-semibold tracking-tight">Mia's Café</span>
+              <span className="font-serif text-lg font-semibold tracking-tight">CafePOS</span>
             </div>
             <div className="hidden sm:flex items-center gap-1.5 ml-2">
               <span className="text-xs text-muted-foreground truncate max-w-[120px]">

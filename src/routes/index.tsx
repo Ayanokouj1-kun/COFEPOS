@@ -17,13 +17,13 @@ import { useMemo } from "react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Mia's Café" },
+      { title: "Dashboard — CafePOS" },
       {
         name: "description",
         content:
           "Café POS and inventory dashboard with today's sales, orders, and low-stock alerts.",
       },
-      { property: "og:title", content: "Dashboard — Mia's Café" },
+      { property: "og:title", content: "Dashboard — CafePOS" },
       { property: "og:description", content: "Simple tools to run your café with ease." },
     ],
   }),

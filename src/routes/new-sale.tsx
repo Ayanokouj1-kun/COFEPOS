@@ -10,9 +10,9 @@ import { PLACEHOLDER_IMAGE } from "@/lib/data";
 export const Route = createFileRoute("/new-sale")({
   head: () => ({
     meta: [
-      { title: "New Sale — Mia's Café" },
+      { title: "New Sale — CafePOS" },
       { name: "description", content: "Ring up a new café order and complete a sale." },
-      { property: "og:title", content: "New Sale — Mia's Café" },
+      { property: "og:title", content: "New Sale — CafePOS" },
       { property: "og:description", content: "Ring up a new café order and complete a sale." },
     ],
   }),

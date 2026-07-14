@@ -39,7 +39,7 @@ export function LoginScreen() {
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary/10">
             <Coffee className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="mt-3 font-serif text-2xl font-bold tracking-tight">Mia's Café</h1>
+          <h1 className="mt-3 font-serif text-2xl font-bold tracking-tight">CafePOS</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sign in to your POS</p>
         </div>
 

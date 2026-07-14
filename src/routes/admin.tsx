@@ -36,9 +36,9 @@ import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Superadmin Panel — Mia's Café" },
+      { title: "Superadmin Panel — CafePOS" },
       { name: "description", content: "Full system control and monitoring for superadmins." },
-      { property: "og:title", content: "Superadmin Panel — Mia's Café" },
+      { property: "og:title", content: "Superadmin Panel — CafePOS" },
     ],
   }),
   component: AdminPanel,
