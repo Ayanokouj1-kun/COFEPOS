@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useStore } from "@/lib/store";
-import { Plus, X, UploadCloud, Loader2 } from "lucide-react";
+import { Plus, X, UploadCloud, Loader2, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
@@ -24,6 +24,7 @@ function Inventory() {
   const { inventory, addStock, deleteStock, isAdmin } = useStore();
   const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [form, setForm] = useState({
     name: "",
     available: "",
@@ -117,9 +118,24 @@ function Inventory() {
     </button>
   ) : undefined;
 
+  const filteredInventory = inventory.filter((item) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <AppLayout headerAction={addBtn}>
       <h1 className="text-xl font-semibold tracking-tight">Inventory</h1>
+
+      <div className="relative mt-3 max-w-sm">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search stock items..."
+          className="h-10 w-full rounded-lg border border-border bg-card pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-ring/40 transition"
+        />
+      </div>
 
       <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card p-4">
         <table className="w-full min-w-[560px] text-sm">
@@ -132,7 +148,7 @@ function Inventory() {
             </tr>
           </thead>
           <tbody>
-            {inventory.map((r) => (
+            {filteredInventory.map((r) => (
               <tr
                 key={r.name}
                 className="border-b border-border/60 last:border-0 hover:bg-muted/10"

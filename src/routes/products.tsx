@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useStore } from "@/lib/store";
-import { Plus, X, UploadCloud, Loader2 } from "lucide-react";
+import { Plus, X, UploadCloud, Loader2, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
@@ -25,6 +25,7 @@ function Products() {
   const { products, addProduct, deleteProduct, updateProduct, isAdmin } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [form, setForm] = useState({
     name: "",
     price: "",
@@ -145,12 +146,29 @@ function Products() {
     </button>
   ) : undefined;
 
+  const filteredProducts = products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.category || "").toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <AppLayout headerAction={addBtn}>
       <h1 className="text-xl font-semibold tracking-tight">Products &amp; Costing</h1>
 
+      <div className="relative mt-3 max-w-sm">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search products by name or category..."
+          className="h-10 w-full rounded-lg border border-border bg-card pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-ring/40 transition"
+        />
+      </div>
+
       <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {products.map((p) => {
+        {filteredProducts.map((p) => {
           const profit = p.price - p.cost;
           const category = (p.category as Category) || getAutomaticCategory(p.name);
           return (
