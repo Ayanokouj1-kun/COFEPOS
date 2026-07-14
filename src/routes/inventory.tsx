@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useStore } from "@/lib/store";
-import { Plus, X, UploadCloud, Loader2, Search } from "lucide-react";
+import { Plus, X, UploadCloud, Loader2, Search, Minus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
@@ -19,6 +19,20 @@ export const Route = createFileRoute("/inventory")({
   }),
   component: Inventory,
 });
+
+const adjustQuantity = (current: string, delta: number): string => {
+  const match = current.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+  if (!match) {
+    const parsed = parseFloat(current);
+    if (isNaN(parsed)) return current;
+    const nextVal = Math.max(0, parsed + delta);
+    return `${nextVal}`;
+  }
+  const num = parseFloat(match[1]);
+  const suffix = match[2];
+  const nextVal = Math.max(0, num + delta);
+  return suffix ? `${nextVal} ${suffix}` : `${nextVal}`;
+};
 
 function Inventory() {
   const { inventory, addStock, deleteStock, isAdmin } = useStore();
@@ -109,6 +123,22 @@ function Inventory() {
     close();
   };
 
+  const handleAdjustStock = (item: (typeof inventory)[0], delta: number) => {
+    const nextAvailable = adjustQuantity(item.available, delta);
+    if (nextAvailable === item.available) return;
+
+    const parsed = parseFloat(nextAvailable);
+    const status = (!isNaN(parsed) && parsed <= 2) ? "low" : "in";
+
+    addStock({
+      name: item.name,
+      available: nextAvailable,
+      status: status,
+      image: item.image,
+    });
+    toast.success(`Updated ${item.name} stock to ${nextAvailable}`);
+  };
+
   const addBtn = isAdmin ? (
     <button
       onClick={() => setOpen(true)}
@@ -172,10 +202,30 @@ function Inventory() {
                     <span className="font-medium text-xs">{r.name}</span>
                   </div>
                 </td>
-                <td
-                  className={`py-2 text-xs font-medium ${r.status === "low" ? "text-orange-600" : ""}`}
-                >
-                  {r.available}
+                <td className="py-2 text-xs font-medium">
+                  <div className="flex items-center gap-2">
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleAdjustStock(r, -1)}
+                        className="h-6 w-6 flex items-center justify-center rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer transition active:scale-95"
+                        aria-label="Decrease stock"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                    )}
+                    <span className={r.status === "low" ? "text-orange-600" : ""}>
+                      {r.available}
+                    </span>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleAdjustStock(r, 1)}
+                        className="h-6 w-6 flex items-center justify-center rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer transition active:scale-95"
+                        aria-label="Increase stock"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
                 </td>
                 <td className="py-2 text-left">
                   <span
