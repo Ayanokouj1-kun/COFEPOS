@@ -3,7 +3,7 @@ import { products as seedProducts, inventory as seedInventory, PLACEHOLDER_IMAGE
 import { supabase } from "./supabase";
 import { useAuth } from "./auth";
 import { toast } from "sonner";
-import { getAutomaticCategory } from "./categories";
+import { getProductCategory, normalizeSizePrices, getPriceForSize, type SizePrices } from "./categories";
 
 export type Product = {
   id: string;
@@ -12,10 +12,44 @@ export type Product = {
   cost: number;
   image: string;
   category: string;
+  /** Per-oz sell prices for Hot/Cold (e.g. { "8oz": 70, "12oz": 80, "16oz": 100 }) */
+  sizePrices?: SizePrices;
 };
 export type InventoryItem = { name: string; available: string; status: "in" | "low"; image?: string };
-export type CartItem = { id: string; name: string; price: number; qty: number };
+export type CartItem = {
+  id: string;
+  name: string;
+  price: number;
+  qty: number;
+  /** Cup size when ordered as Hot/Cold (e.g. 12oz) */
+  size?: string;
+  /** Unique cart line key: productId or productId::size */
+  lineId: string;
+};
+
+export function cartLineId(productId: string, size?: string) {
+  return size ? `${productId}::${size}` : productId;
+}
 export type Notification = { id: string; message: string; time: number };
+
+const NOTIF_READ_PREFIX = "mias-cafe-notif-read-";
+
+function loadReadIds(userId: string): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(NOTIF_READ_PREFIX + userId);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    return new Set(Array.isArray(parsed) ? (parsed as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveReadIds(userId: string, ids: Set<string>) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(NOTIF_READ_PREFIX + userId, JSON.stringify([...ids]));
+}
 
 export type Transaction = {
   id: string;
@@ -33,14 +67,15 @@ type Store = {
   inventory: InventoryItem[];
   cart: CartItem[];
   notifications: Notification[];
+  unreadCount: number;
   transactions: Transaction[];
   loading: boolean;
   isAdmin: boolean;
   role: "superadmin" | "admin" | "barista";
   displayName: string;
-  addToCart: (p: Product) => void;
-  removeFromCart: (id: string) => void;
-  changeQty: (id: string, delta: number) => void;
+  addToCart: (p: Product, options?: { size?: string }) => void;
+  removeFromCart: (lineId: string) => void;
+  changeQty: (lineId: string, delta: number) => void;
   clearCart: () => void;
   addProduct: (p: Omit<Product, "id" | "image"> & { image?: string }) => void;
   deleteProduct: (id: string) => void;
@@ -49,6 +84,9 @@ type Store = {
   deleteStock: (name: string) => void;
   notify: (message: string) => void;
   clearNotifications: () => void;
+  isNotificationRead: (id: string) => boolean;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
   addTransaction: (
     items: CartItem[],
     subtotal: number,
@@ -64,15 +102,23 @@ const StoreContext = createContext<Store | null>(null);
 const CART_KEY = "mias-cafe-cart-v1";
 
 /** Merge DB products with local asset images and fill missing category via auto-detection */
-function mergeImages(dbProducts: Product[]): Product[] {
-  return dbProducts.map((p) => ({
-    ...p,
-    // PostgREST returns NUMERIC columns as strings
-    price: Number(p.price) || 0,
-    cost: Number(p.cost) || 0,
-    image: seedProducts.find((sp) => sp.id === p.id)?.image || p.image || PLACEHOLDER_IMAGE,
-    category: p.category || getAutomaticCategory(p.name),
-  }));
+function mergeImages(dbProducts: Array<Product & { size_prices?: unknown }>): Product[] {
+  return dbProducts.map((p) => {
+    const category = getProductCategory(p.category, p.name);
+    const price = Number(p.price) || 0;
+    return {
+      ...p,
+      price,
+      cost: Number(p.cost) || 0,
+      image: seedProducts.find((sp) => sp.id === p.id)?.image || p.image || PLACEHOLDER_IMAGE,
+      category,
+      sizePrices: normalizeSizePrices(
+        (p as { size_prices?: unknown }).size_prices ?? p.sizePrices,
+        price,
+        category,
+      ),
+    };
+  });
 }
 
 /** Normalize a raw Supabase transaction row into the Transaction shape the UI expects */
@@ -94,6 +140,8 @@ function normalizeTransaction(raw: Record<string, unknown>): Transaction {
     ...item,
     price: Number(item.price) || 0,
     qty: Number(item.qty) || 0,
+    lineId: item.lineId || cartLineId(String(item.id ?? ""), item.size),
+    size: item.size || undefined,
   }));
 
   const status = raw.status === "voided" ? "voided" : "completed";
@@ -111,14 +159,25 @@ function normalizeTransaction(raw: Record<string, unknown>): Transaction {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const { isAdmin, role, displayName } = useAuth();
+  const { isAdmin, role, displayName, user } = useAuth();
 
   const [products, setProducts] = useState<Product[]>(seedProducts);
   const [inventory, setInventory] = useState<InventoryItem[]>(seedInventory);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user?.id) setReadIds(loadReadIds(user.id));
+    else setReadIds(new Set());
+  }, [user?.id]);
+
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !readIds.has(n.id)).length,
+    [notifications, readIds],
+  );
 
   // ── Fetch from Supabase on mount ──────────────────────────
   useEffect(() => {
@@ -162,7 +221,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(CART_KEY);
     if (saved) {
       try {
-        setCart(JSON.parse(saved) as CartItem[]);
+        const parsed = JSON.parse(saved) as CartItem[];
+        setCart(
+          parsed.map((i) => ({
+            ...i,
+            lineId: i.lineId || cartLineId(i.id, i.size),
+          })),
+        );
       } catch {
         /* ignore */
       }
@@ -180,21 +245,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       inventory,
       cart,
       notifications,
+      unreadCount,
       transactions,
       loading,
       isAdmin,
       role,
       displayName,
-      addToCart: (p) =>
+      addToCart: (p, options) =>
         setCart((c) => {
-          const found = c.find((i) => i.id === p.id);
-          if (found) return c.map((i) => (i.id === p.id ? { ...i, qty: i.qty + 1 } : i));
-          return [...c, { id: p.id, name: p.name, price: p.price, qty: 1 }];
+          const size = options?.size;
+          const lineId = cartLineId(p.id, size);
+          const unitPrice = getPriceForSize(p, size);
+          const displayName = size ? `${p.name} · ${size}` : p.name;
+          const found = c.find((i) => i.lineId === lineId);
+          if (found) {
+            return c.map((i) => (i.lineId === lineId ? { ...i, qty: i.qty + 1 } : i));
+          }
+          return [
+            ...c,
+            {
+              id: p.id,
+              name: displayName,
+              price: unitPrice,
+              qty: 1,
+              size,
+              lineId,
+            },
+          ];
         }),
-      removeFromCart: (id) => setCart((c) => c.filter((i) => i.id !== id)),
-      changeQty: (id, delta) =>
+      removeFromCart: (lineId) => setCart((c) => c.filter((i) => i.lineId !== lineId)),
+      changeQty: (lineId, delta) =>
         setCart((c) =>
-          c.map((i) => (i.id === id ? { ...i, qty: i.qty + delta } : i)).filter((i) => i.qty > 0),
+          c
+            .map((i) => (i.lineId === lineId ? { ...i, qty: i.qty + delta } : i))
+            .filter((i) => i.qty > 0),
         ),
       clearCart: () => setCart([]),
 
@@ -205,7 +289,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return;
         }
         const id = p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-        const category = p.category || getAutomaticCategory(p.name);
+        const category = getProductCategory(p.category, p.name);
+        const sizePrices = normalizeSizePrices(p.sizePrices, p.price, category);
         const newProd: Product = {
           id,
           name: p.name,
@@ -213,12 +298,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           cost: p.cost,
           category,
           image: p.image || PLACEHOLDER_IMAGE,
+          sizePrices,
         };
         setProducts((prev) => [...prev, newProd]);
 
         supabase
           .from("products")
-          .upsert({ id, name: p.name, price: p.price, cost: p.cost, category, image: p.image || "" })
+          .upsert({
+            id,
+            name: p.name,
+            price: p.price,
+            cost: p.cost,
+            category,
+            image: p.image || "",
+            size_prices: sizePrices ?? null,
+          })
           .then(({ error }) => {
             if (error) console.error("Supabase addProduct error:", error);
           });
@@ -269,15 +363,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           toast.error("Only admins can edit products.");
           return;
         }
-        const category = p.category || getAutomaticCategory(p.name);
+        const category = getProductCategory(p.category, p.name);
+        const sizePrices = normalizeSizePrices(p.sizePrices, p.price, category);
         setProducts((prev) =>
           prev.map((item) =>
             item.id === id
-              ? { ...item, name: p.name, price: p.price, cost: p.cost, category, image: p.image !== undefined ? (p.image || PLACEHOLDER_IMAGE) : item.image }
+              ? {
+                  ...item,
+                  name: p.name,
+                  price: p.price,
+                  cost: p.cost,
+                  category,
+                  sizePrices,
+                  image:
+                    p.image !== undefined ? p.image || PLACEHOLDER_IMAGE : item.image,
+                }
               : item,
           ),
         );
-        const updatePayload: any = { name: p.name, price: p.price, cost: p.cost, category };
+        const updatePayload: Record<string, unknown> = {
+          name: p.name,
+          price: p.price,
+          cost: p.cost,
+          category,
+          size_prices: sizePrices ?? null,
+        };
         if (p.image !== undefined) {
           updatePayload.image = p.image;
         }
@@ -393,6 +503,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           });
       },
 
+      isNotificationRead: (id) => readIds.has(id),
+
+      markNotificationRead: (id) => {
+        setReadIds((prev) => {
+          if (prev.has(id)) return prev;
+          const next = new Set(prev);
+          next.add(id);
+          if (user?.id) saveReadIds(user.id, next);
+          return next;
+        });
+      },
+
+      markAllNotificationsRead: () => {
+        setReadIds((prev) => {
+          const next = new Set(prev);
+          for (const n of notifications) next.add(n.id);
+          if (user?.id) saveReadIds(user.id, next);
+          return next;
+        });
+      },
+
       // ── addTransaction: everyone can create sales ──────────
       addTransaction: (items, subtotal, tax, total, payment) => {
         const txId = "TX-" + Math.floor(1000 + Math.random() * 9000);
@@ -445,7 +576,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           });
       },
     }),
-    [products, inventory, cart, notifications, transactions, loading, isAdmin, role, displayName],
+    [products, inventory, cart, notifications, unreadCount, readIds, transactions, loading, isAdmin, role, displayName, user?.id],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

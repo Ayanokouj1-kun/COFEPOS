@@ -121,4 +121,13 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
+
+  /* Premium minimalist Lucide icons */
+  .lucide {
+    stroke-width: 1.5;
+    transition:
+      color 0.2s ease,
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
 }
