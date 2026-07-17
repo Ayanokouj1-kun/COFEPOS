@@ -273,7 +273,7 @@ function OverviewTab({
       .slice(0, 5);
   }, [completedTx]);
 
-  const lowStock = inventory.filter((i) => i.status === "low");
+  const lowStock = useMemo(() => inventory.filter((i) => i.status === "low"), [inventory]);
 
   return (
     <div className="space-y-5">

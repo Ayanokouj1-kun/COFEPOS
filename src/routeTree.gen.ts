@@ -9,12 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SyrupsRouteImport } from './routes/syrups'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as NewSaleRouteImport } from './routes/new-sale'
 import { Route as InventoryRouteImport } from './routes/inventory'
+import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SyrupsRoute = SyrupsRouteImport.update({
+  id: '/syrups',
+  path: '/syrups',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductsRoute = ProductsRouteImport.update({
   id: '/products',
   path: '/products',
@@ -28,6 +41,11 @@ const NewSaleRoute = NewSaleRouteImport.update({
 const InventoryRoute = InventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CategoriesRoute = CategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -44,43 +62,94 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/categories': typeof CategoriesRoute
   '/inventory': typeof InventoryRoute
   '/new-sale': typeof NewSaleRoute
   '/products': typeof ProductsRoute
+  '/settings': typeof SettingsRoute
+  '/syrups': typeof SyrupsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/categories': typeof CategoriesRoute
   '/inventory': typeof InventoryRoute
   '/new-sale': typeof NewSaleRoute
   '/products': typeof ProductsRoute
+  '/settings': typeof SettingsRoute
+  '/syrups': typeof SyrupsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/categories': typeof CategoriesRoute
   '/inventory': typeof InventoryRoute
   '/new-sale': typeof NewSaleRoute
   '/products': typeof ProductsRoute
+  '/settings': typeof SettingsRoute
+  '/syrups': typeof SyrupsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/inventory' | '/new-sale' | '/products'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/categories'
+    | '/inventory'
+    | '/new-sale'
+    | '/products'
+    | '/settings'
+    | '/syrups'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/inventory' | '/new-sale' | '/products'
-  id: '__root__' | '/' | '/admin' | '/inventory' | '/new-sale' | '/products'
+  to:
+    | '/'
+    | '/admin'
+    | '/categories'
+    | '/inventory'
+    | '/new-sale'
+    | '/products'
+    | '/settings'
+    | '/syrups'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/categories'
+    | '/inventory'
+    | '/new-sale'
+    | '/products'
+    | '/settings'
+    | '/syrups'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  CategoriesRoute: typeof CategoriesRoute
   InventoryRoute: typeof InventoryRoute
   NewSaleRoute: typeof NewSaleRoute
   ProductsRoute: typeof ProductsRoute
+  SettingsRoute: typeof SettingsRoute
+  SyrupsRoute: typeof SyrupsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/syrups': {
+      id: '/syrups'
+      path: '/syrups'
+      fullPath: '/syrups'
+      preLoaderRoute: typeof SyrupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/products': {
       id: '/products'
       path: '/products'
@@ -100,6 +169,13 @@ declare module '@tanstack/react-router' {
       path: '/inventory'
       fullPath: '/inventory'
       preLoaderRoute: typeof InventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/categories': {
+      id: '/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof CategoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -122,9 +198,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  CategoriesRoute: CategoriesRoute,
   InventoryRoute: InventoryRoute,
   NewSaleRoute: NewSaleRoute,
   ProductsRoute: ProductsRoute,
+  SettingsRoute: SettingsRoute,
+  SyrupsRoute: SyrupsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

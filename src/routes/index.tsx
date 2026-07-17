@@ -94,9 +94,16 @@ function Dashboard() {
     return inventory.filter((item) => item.status === "low");
   }, [inventory]);
 
+  // Scope dashboard stats to today only — keeps all reduce calls O(today's txs)
+  const todayStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, []);
+
   const completedTx = useMemo(
-    () => transactions.filter((t) => t.status === "completed"),
-    [transactions],
+    () => transactions.filter((t) => t.status === "completed" && t.time >= todayStart),
+    [transactions, todayStart],
   );
 
   const todaySales = useMemo(() => completedTx.reduce((sum, t) => sum + t.total, 0), [completedTx]);
@@ -258,7 +265,14 @@ function Dashboard() {
                       <td
                         className={`py-2 text-xs font-semibold ${t.status === "voided" ? "line-through text-muted-foreground font-normal" : ""}`}
                       >
-                        ₱{t.total.toFixed(2)}
+                        <div className="flex flex-col gap-0.5">
+                          <span>₱{t.total.toFixed(2)}</span>
+                          {t.discount != null && t.discount > 0 && (
+                            <span className="text-[9px] font-medium text-emerald-700">
+                              Senior -{t.discountPercent ?? 0}% (-₱{t.discount.toFixed(2)})
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-2 text-right">
                         {t.status === "completed" ? (

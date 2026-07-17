@@ -15,6 +15,9 @@ import {
   ShoppingBag,
   Megaphone,
   CheckCheck,
+  Layers,
+  Droplet,
+  Settings,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useStore, type Notification } from "@/lib/store";
@@ -416,6 +419,48 @@ export function AppLayout({
                   </Link>
                 );
               })}
+
+              {isAdmin && (
+                <>
+                  <div className="my-1 border-t border-border/60" />
+                  <Link
+                    to="/categories"
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      pathname.startsWith("/categories")
+                        ? "bg-sidebar-active text-sidebar-active-foreground"
+                        : "text-foreground/70 hover:bg-muted"
+                    }`}
+                  >
+                    <Layers className="h-4 w-4" />
+                    Categories
+                  </Link>
+                  <Link
+                    to="/syrups"
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      pathname.startsWith("/syrups")
+                        ? "bg-sidebar-active text-sidebar-active-foreground"
+                        : "text-foreground/70 hover:bg-muted"
+                    }`}
+                  >
+                    <Droplet className="h-4 w-4" />
+                    Syrups
+                  </Link>
+                  <Link
+                    to="/settings"
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      pathname.startsWith("/settings")
+                        ? "bg-sidebar-active text-sidebar-active-foreground"
+                        : "text-foreground/70 hover:bg-muted"
+                    }`}
+                  >
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </Link>
+                </>
+              )}
 
               {role === "superadmin" && (
                 <>
