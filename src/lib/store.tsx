@@ -153,7 +153,7 @@ type Store = {
     total: number,
     payment: string,
     meta?: { seniorDiscount?: boolean; discountPercent?: number },
-  ) => void;
+  ) => Transaction;
   updateSeniorDiscountPercent: (percent: number) => Promise<void>;
   voidTransaction: (id: string) => void;
 };
@@ -847,6 +847,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           discount_percent: meta?.discountPercent ?? null,
         })
         .then(({ error }) => { if (error) console.error("Supabase addTransaction error:", error); });
+      return newTx;
     },
     [],
   );

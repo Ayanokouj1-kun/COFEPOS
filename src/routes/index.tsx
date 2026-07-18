@@ -11,8 +11,9 @@ import {
   Droplet,
   Receipt,
 } from "lucide-react";
-import { useStore } from "@/lib/store";
-import { useMemo } from "react";
+import { useStore, type Transaction } from "@/lib/store";
+import { ReceiptModal } from "@/components/ReceiptModal";
+import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -88,7 +89,9 @@ function formatTxTime(t: number) {
 }
 
 function Dashboard() {
-  const { transactions, products, voidTransaction, isAdmin, inventory } = useStore();
+  const { transactions, products, voidTransaction, isAdmin, inventory, displayName } = useStore();
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const lowStockItems = useMemo(() => {
     return inventory.filter((item) => item.status === "low");
@@ -276,16 +279,28 @@ function Dashboard() {
                       </td>
                       <td className="py-2 text-right">
                         {t.status === "completed" ? (
-                          isAdmin ? (
+                          <div className="inline-flex items-center justify-end gap-1">
                             <button
-                              onClick={() => voidTransaction(t.id)}
-                              className="h-6 rounded px-1.5 text-[10px] font-medium text-destructive hover:bg-destructive/15 border border-destructive/20 transition active:scale-95 cursor-pointer"
+                              type="button"
+                              onClick={() => {
+                                setSelectedTx(t);
+                                setModalOpen(true);
+                              }}
+                              className="inline-flex h-6 items-center gap-1 rounded px-1.5 text-[10px] font-medium text-foreground hover:bg-muted border border-border/60 transition active:scale-95 cursor-pointer"
+                              title="Print receipt"
                             >
-                              Void
+                              <Receipt className="h-3 w-3" />
+                              Print
                             </button>
-                          ) : (
-                            <span className="text-[9px] text-muted-foreground">—</span>
-                          )
+                            {isAdmin ? (
+                              <button
+                                onClick={() => voidTransaction(t.id)}
+                                className="h-6 rounded px-1.5 text-[10px] font-medium text-destructive hover:bg-destructive/15 border border-destructive/20 transition active:scale-95 cursor-pointer"
+                              >
+                                Void
+                              </button>
+                            ) : null}
+                          </div>
                         ) : (
                           <span className="text-[9px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                             Voided
@@ -307,6 +322,15 @@ function Dashboard() {
           </div>
         </div>
       </div>
+
+      <ReceiptModal
+        transaction={selectedTx}
+        isOpen={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedTx(null);
+        }}
+      />
     </AppLayout>
   );
 }

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
-import { useStore, type Product } from "@/lib/store";
+import { useStore, type Product, type Transaction } from "@/lib/store";
 import { Search, Trash2, Minus, Plus, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import {
   variantsForCategory,
 } from "@/lib/categories";
 import { PLACEHOLDER_IMAGE } from "@/lib/data";
+import { ReceiptModal } from "@/components/ReceiptModal";
 
 export const Route = createFileRoute("/new-sale")({
   head: () => ({
@@ -51,6 +52,7 @@ function NewSale() {
     notify,
     addTransaction,
     seniorDiscountPercent,
+    displayName,
   } = useStore();
 
   const categories = useMemo(() => activeCategories(menuCategories), [menuCategories]);
@@ -65,6 +67,8 @@ function NewSale() {
   const [seniorDiscount, setSeniorDiscount] = useState(false);
   const payment = "Cash";
   const navigate = useNavigate();
+  const [activeTx, setActiveTx] = useState<Transaction | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const filtered = useMemo(
     () =>
@@ -156,7 +160,7 @@ function NewSale() {
       toast.error("Cart is empty — add products first.");
       return;
     }
-    addTransaction(
+    const tx = addTransaction(
       [...cart],
       subtotal,
       discount,
@@ -167,10 +171,17 @@ function NewSale() {
         ? { seniorDiscount: true, discountPercent: seniorDiscountPercent }
         : undefined,
     );
+    setActiveTx(tx);
+    setModalOpen(true);
     toast.success(`Sale completed · ₱${total.toFixed(2)}`);
     notify(
       `New order · ₱${total.toFixed(2)} · ${payment}${seniorDiscount ? ` · Senior -${seniorDiscountPercent}%` : ""} · ${cart.reduce((s, i) => s + i.qty, 0)} item(s)`,
     );
+  };
+
+  const handleCloseReceipt = () => {
+    setModalOpen(false);
+    setActiveTx(null);
     clearCart();
     setSeniorDiscount(false);
     navigate({ to: "/" });
@@ -503,6 +514,12 @@ function NewSale() {
           </div>
         </div>
       )}
+
+      <ReceiptModal
+        transaction={activeTx}
+        isOpen={modalOpen}
+        onClose={handleCloseReceipt}
+      />
     </AppLayout>
   );
 }
