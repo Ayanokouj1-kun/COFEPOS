@@ -19,7 +19,7 @@ export default defineConfig({
     }),
     viteReact(),
     nitro({
-      preset: "cloudflare-module",
+      preset: process.env.VERCEL ? "vercel" : "cloudflare-module",
     }),
   ],
 });
